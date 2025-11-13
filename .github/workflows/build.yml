@@ -1,0 +1,57 @@
+name: Build and Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Build pdf-opticompress
+      run: |
+        cd pdf-opticompress
+        cargo build --release
+
+    - name: Build pdf-renamer
+      run: |
+        cd pdf-renamer
+        cargo build --release
+
+    - name: Set binary extension
+      shell: bash
+      run: |
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          echo "EXT=.exe" >> $GITHUB_ENV
+        else
+          echo "EXT=" >> $GITHUB_ENV
+        fi
+
+    - name: Upload pdf-opticompress binary
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./pdf-opticompress/target/release/pdf-opticompress${{ env.EXT }}
+        asset_name: pdf-opticompress-${{ matrix.os }}
+        asset_content_type: application/octet-stream
+
+    - name: Upload pdf-renamer binary
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./pdf-renamer/target/release/pdf-renamer${{ env.EXT }}
+        asset_name: pdf-renamer-${{ matrix.os }}
+        asset_content_type: application/octet-stream
