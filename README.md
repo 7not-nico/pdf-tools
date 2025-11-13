@@ -13,6 +13,13 @@ Renames PDF files based on their metadata.
 ## Installation
 
 ### Quick Run (Easiest)
+Run tools temporarily in your terminal:
+```bash
+curl -fsSL https://raw.githubusercontent.com/7not-nico/pdf-tools/main/run_online.sh | bash
+```
+This downloads the latest binary for your OS, runs it interactively, and cleans up.
+
+### GitHub Actions
 Use GitHub Actions to run tools online:
 1. Go to [Actions Tab](https://github.com/7not-nico/pdf-tools/actions)
 2. Select "Run PDF Tools" workflow
