@@ -66,11 +66,12 @@ if [ "$OS_NAME" = "windows-latest" ]; then
     ASSET_NAME="$ASSET_NAME$EXT"
 fi
 
-ASSET_URL=$(echo $RELEASE_DATA | jq -r ".assets[] | select(.name == \"$ASSET_NAME\") | .browser_download_url")
-if [ -z "$ASSET_URL" ] || [ "$ASSET_URL" = "null" ]; then
+# Parse JSON without jq
+ASSET_URL=$(echo "$RELEASE_DATA" | grep -o '"browser_download_url":"[^"]*","name":"'"$ASSET_NAME"'"' | sed 's/.*"browser_download_url":"\([^"]*\)".*/\1/')
+if [ -z "$ASSET_URL" ]; then
     echo "Asset not found: $ASSET_NAME"
     echo "Available assets:"
-    echo $RELEASE_DATA | jq -r ".assets[].name"
+    echo "$RELEASE_DATA" | grep -o '"name":"[^"]*"' | sed 's/.*"name":"\([^"]*\)".*/\1/'
     exit 1
 fi
 
