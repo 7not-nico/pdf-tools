@@ -45,20 +45,22 @@ echo ""
 echo "Choose tool:"
 echo "1. pdf-opticompress"
 echo "2. pdf-renamer"
-read -p "Enter choice (1 or 2): " tool_choice
-
-case $tool_choice in
-    1)
-        TOOL="pdf-opticompress"
-        ;;
-    2)
-        TOOL="pdf-renamer"
-        ;;
-    *)
-        echo "Invalid choice"
-        exit 1
-        ;;
-esac
+while true; do
+    read -p "Enter choice (1 or 2): " tool_choice
+    case $tool_choice in
+        1)
+            TOOL="pdf-opticompress"
+            break
+            ;;
+        2)
+            TOOL="pdf-renamer"
+            break
+            ;;
+        *)
+            echo "Invalid choice, try again."
+            ;;
+    esac
+done
 
 # Find asset
 ASSET_NAME="$TOOL-$OS_NAME"
