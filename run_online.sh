@@ -46,20 +46,24 @@ echo "Choose tool:"
 echo "1. pdf-opticompress"
 echo "2. pdf-renamer"
 while true; do
-    read -p "Enter choice (1 or 2): " tool_choice
-    case $tool_choice in
-        1)
-            TOOL="pdf-opticompress"
-            break
-            ;;
-        2)
-            TOOL="pdf-renamer"
-            break
-            ;;
-        *)
-            echo "Invalid choice, try again."
-            ;;
-    esac
+    if read -t 30 -p "Enter choice (1 or 2): " tool_choice; then
+        case $tool_choice in
+            1)
+                TOOL="pdf-opticompress"
+                break
+                ;;
+            2)
+                TOOL="pdf-renamer"
+                break
+                ;;
+            *)
+                echo "Invalid choice, try again."
+                ;;
+        esac
+    else
+        echo "No input received in 30 seconds, exiting."
+        exit 1
+    fi
 done
 
 # Find asset
