@@ -1,0 +1,13 @@
+[package]
+name = "pdf-opticompress"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lopdf = "0.31"
+clap = { version = "4.4", features = ["derive"] }
+image = "0.24"
+oxipng = "9.0"
+rayon = "1.8"
+indicatif = "0.17"
+anyhow = "1.0"
