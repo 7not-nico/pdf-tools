@@ -1,0 +1,16 @@
+{
+  "name": "Rust PDF Tools",
+  "image": "mcr.microsoft.com/devcontainers/rust:1",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "postCreateCommand": "cd pdf-opticompress && cargo build --release && cd ../pdf-renamer && cargo build --release",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "ms-vscode.vscode-json"
+      ]
+    }
+  }
+}
