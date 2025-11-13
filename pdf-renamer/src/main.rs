@@ -4,6 +4,7 @@ use rayon::prelude::*;
 use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
+use tempfile;
 
 #[derive(Parser)]
 #[command(name = "pdf-renamer")]
@@ -19,15 +20,32 @@ struct Args {
 }
 
 fn main() {
-    let args = Args::parse();
+    let mut args = Args::parse();
 
-    if Path::new(&args.input).is_dir() {
+    if args.input.is_none() {
+        print!("Enter path to PDF file or directory (URL or local): ");
+        io::stdout().flush().unwrap();
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        args.input = Some(input.trim().to_string());
+        print!("Enter pattern (title or filename, default title): ");
+        io::stdout().flush().unwrap();
+        let mut pattern = String::new();
+        io::stdin().read_line(&mut pattern).unwrap();
+        if !pattern.trim().is_empty() {
+            args.pattern = pattern.trim().to_string();
+        }
+    }
+
+    let input = args.input.unwrap();
+    let input_path = resolve_input_path(&input).unwrap();
+    if Path::new(&input_path).is_dir() {
         // Batch rename
-        println!("Batch renaming PDFs in directory: {}", args.input);
-        batch_rename_pdfs(&args.input, &args.pattern);
+        println!("Batch renaming PDFs in directory: {}", input_path);
+        batch_rename_pdfs(&input_path, &args.pattern);
     } else {
         // Single file
-        rename_single_pdf(&args.input, &args.pattern);
+        rename_single_pdf(&input_path, &args.pattern);
     }
 }
 
@@ -142,4 +160,17 @@ fn make_concise_filename(name: &str) -> String {
     concise = concise.replace(|c: char| !c.is_alphanumeric() && c != ' ' && c != '-' && c != '_', "_");
     concise = concise.chars().take(50).collect();
     concise.trim().to_string()
+}
+
+fn resolve_input_path(input: &str) -> Result<String, Box<dyn std::error::Error>> {
+    if input.starts_with("http://") || input.starts_with("https://") {
+        println!("Downloading from URL: {}", input);
+        let response = reqwest::blocking::get(input)?;
+        let temp_file = tempfile::NamedTempFile::new()?;
+        let content = response.bytes()?;
+        std::fs::write(temp_file.path(), content)?;
+        Ok(temp_file.path().to_str().unwrap().to_string())
+    } else {
+        Ok(input.to_string())
+    }
 }
