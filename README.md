@@ -12,12 +12,18 @@ Renames PDF files based on their metadata.
 
 ## Installation
 
-### Run Online (Recommended)
-Use GitHub Codespaces for instant access:
+### Quick Run (Easiest)
+Use GitHub Actions to run tools online:
+1. Go to [Actions Tab](https://github.com/7not-nico/pdf-tools/actions)
+2. Select "Run PDF Tools" workflow
+3. Click "Run workflow", fill in the PDF URL and options
+4. View results in the workflow logs
+
+### Online Interactive
+Use GitHub Codespaces for full interactive experience:
 1. Go to [GitHub Repo](https://github.com/7not-nico/pdf-tools)
 2. Click "Code" > "Codespaces" > "Create codespace on main"
-3. Wait for setup (builds included)
-4. Open terminal and run `./pdf-opticompress/target/release/pdf-opticompress` or `./pdf-renamer/target/release/pdf-renamer` for interactive prompts
+3. Wait for setup, then run `./pdf-opticompress` or `./pdf-renamer` for prompts
 
 ### From Source
 Ensure you have Rust installed. Then, for each project:

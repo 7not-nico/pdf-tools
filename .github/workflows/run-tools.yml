@@ -1,0 +1,92 @@
+name: Run PDF Tools
+
+on:
+  workflow_dispatch:
+    inputs:
+      tool:
+        description: 'Choose tool: opticomp or renamer'
+        required: true
+        default: 'opticomp'
+        type: choice
+        options:
+        - opticomp
+        - renamer
+      command:
+        description: 'Command for opticomp: optimize, analyze, batch'
+        required: false
+        default: 'optimize'
+        type: string
+      pdf_url:
+        description: 'URL of the PDF file'
+        required: true
+        type: string
+      output_url:
+        description: 'Output URL for optimized PDF (optional)'
+        required: false
+        type: string
+      quality:
+        description: 'Quality for optimize (0-100)'
+        required: false
+        default: '80'
+        type: string
+      preset:
+        description: 'Preset for optimize: web, print, archive, maximum'
+        required: false
+        default: 'web'
+        type: string
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Build pdf-opticompress
+      run: |
+        cd pdf-opticompress
+        cargo build --release
+
+    - name: Build pdf-renamer
+      run: |
+        cd pdf-renamer
+        cargo build --release
+
+    - name: Download PDF
+      run: |
+        mkdir -p inputs
+        curl -L "${{ inputs.pdf_url }}" -o inputs/input.pdf
+
+    - name: Run pdf-opticompress
+      if: inputs.tool == 'opticomp'
+      run: |
+        cd pdf-opticompress
+        case "${{ inputs.command }}" in
+          optimize)
+            ./target/release/pdf-opticompress optimize ../inputs/input.pdf ../output.pdf --quality ${{ inputs.quality }} --preset ${{ inputs.preset }}
+            ;;
+          analyze)
+            ./target/release/pdf-opticompress analyze ../inputs/input.pdf
+            ;;
+          batch)
+            ./target/release/pdf-opticompress batch ../inputs/input.pdf
+            ;;
+        esac
+
+    - name: Run pdf-renamer
+      if: inputs.tool == 'renamer'
+      run: |
+        cd pdf-renamer
+        ./target/release/pdf-renamer --input ../inputs/input.pdf
+
+    - name: Upload output
+      if: inputs.tool == 'opticomp' && inputs.command == 'optimize' && inputs.output_url != ''
+      run: |
+        curl -X PUT -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Content-Type: application/pdf" --data-binary @output.pdf "${{ inputs.output_url }}"
+
+    - name: Show results
+      run: |
+        echo "Tool run completed. Check logs for output."
