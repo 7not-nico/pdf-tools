@@ -17,7 +17,7 @@ Use GitHub Codespaces for instant access:
 1. Go to [GitHub Repo](https://github.com/7not-nico/pdf-tools)
 2. Click "Code" > "Codespaces" > "Create codespace on main"
 3. Wait for setup (builds included)
-4. Open terminal and run `./run_tools.sh` for interactive prompts
+4. Open terminal and run `./pdf-opticompress/target/release/pdf-opticompress` or `./pdf-renamer/target/release/pdf-renamer` for interactive prompts
 
 ### From Source
 Ensure you have Rust installed. Then, for each project:

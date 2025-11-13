@@ -2,6 +2,7 @@ use clap::Parser;
 use lopdf::{Document, Object};
 use rayon::prelude::*;
 use std::fs;
+use std::io::{self, Write};
 use std::path::Path;
 
 #[derive(Parser)]
@@ -10,7 +11,7 @@ use std::path::Path;
 struct Args {
     /// Path to the PDF file or directory containing PDFs
     #[arg(short, long)]
-    input: String,
+    input: Option<String>,
 
     /// Rename pattern: 'title' for title metadata, 'filename' to keep original
     #[arg(short, long, default_value = "title")]

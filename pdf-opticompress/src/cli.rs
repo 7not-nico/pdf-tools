@@ -5,9 +5,10 @@ use std::path::PathBuf;
 #[command(name = "pdf-opticompress")]
 #[command(about = "High-performance PDF optimizer")]
 #[command(version = "0.1.0")]
+#[command(subcommand_required = false)]
 pub struct Cli {
     #[command(subcommand)]
-    pub command: Commands,
+    pub command: Option<Commands>,
 }
 
 #[derive(Subcommand)]
