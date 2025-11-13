@@ -45,8 +45,9 @@ echo ""
 echo "Choose tool:"
 echo "1. pdf-opticompress"
 echo "2. pdf-renamer"
+SECONDS=0
 while true; do
-    if read -t 30 -p "Enter choice (1 or 2): " tool_choice; then
+    if read -t 1 -p "Enter choice (1 or 2): " tool_choice; then
         case $tool_choice in
             1)
                 TOOL="pdf-opticompress"
@@ -56,13 +57,21 @@ while true; do
                 TOOL="pdf-renamer"
                 break
                 ;;
+            "")
+                # Empty input, ignore
+                ;;
             *)
                 echo "Invalid choice, try again."
                 ;;
         esac
     else
-        echo "No input received in 30 seconds, exiting."
-        exit 1
+        SECONDS=$((SECONDS + 1))
+        if [ $SECONDS -eq 15 ]; then
+            echo "Warning: 15 seconds have passed, please enter 1 or 2."
+        elif [ $SECONDS -eq 30 ]; then
+            echo "No input received in 30 seconds, exiting."
+            exit 1
+        fi
     fi
 done
 
