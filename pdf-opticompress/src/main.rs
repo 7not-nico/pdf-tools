@@ -11,8 +11,10 @@ use clap::Parser;
 use cli::Cli;
 use rayon::prelude::*;
 use std::path::PathBuf;
+use std::time::Instant;
 
 fn main() -> Result<()> {
+    let start = Instant::now();
     let cli = Cli::parse();
 
     match cli.command {
@@ -128,6 +130,9 @@ fn main() -> Result<()> {
             println!("Total images optimized: {}", total_images);
         }
     }
+
+    let duration = start.elapsed();
+    println!("Execution time: {:.2} seconds", duration.as_secs_f64());
 
     Ok(())
 }

@@ -4,6 +4,7 @@ use rayon::prelude::*;
 use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
+use std::time::Instant;
 use tempfile;
 
 #[derive(Parser)]
@@ -20,6 +21,7 @@ struct Args {
 }
 
 fn main() {
+    let start = Instant::now();
     let mut args = Args::parse();
 
     if args.input.is_none() {
@@ -47,6 +49,9 @@ fn main() {
         // Single file
         rename_single_pdf(&input_path, &args.pattern);
     }
+
+    let duration = start.elapsed();
+    println!("Execution time: {:.2} seconds", duration.as_secs_f64());
 }
 
 fn rename_single_pdf(path: &str, pattern: &str) {
