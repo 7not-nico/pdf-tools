@@ -15,9 +15,9 @@ Renames PDF files based on their metadata.
 ### Quick Run (Easiest)
 Run tools temporarily in your terminal:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/7not-nico/pdf-tools/main/run_online.sh | bash
+curl -o run_online.sh https://raw.githubusercontent.com/7not-nico/pdf-tools/main/run_online.sh && bash run_online.sh
 ```
-This downloads the latest binary for your OS, runs it interactively, and cleans up.
+This downloads the script, then runs it interactively. It fetches the latest binary for your OS, runs it, and cleans up.
 
 ### GitHub Actions
 Use GitHub Actions to run tools online:
