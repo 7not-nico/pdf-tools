@@ -2,10 +2,9 @@ use clap::Parser;
 use lopdf::{Document, Object};
 use rayon::prelude::*;
 use std::fs;
-use std::io::{self, Write};
 use std::path::Path;
 use std::time::Instant;
-use tempfile;
+use std::collections::HashMap;
 
 #[derive(Parser)]
 #[command(name = "pdf-renamer")]
@@ -13,71 +12,55 @@ use tempfile;
 struct Args {
     /// Path to the PDF file or directory containing PDFs
     #[arg(short, long)]
-    input: Option<String>,
+    input: String,
 
-    /// Rename pattern: 'title' for title metadata, 'filename' to keep original
-    #[arg(short, long, default_value = "title")]
-    pattern: String,
+    /// Perform a dry run without actually renaming files
+    #[arg(long)]
+    dry_run: bool,
+
+    /// Enable verbose output
+    #[arg(short, long)]
+    verbose: bool,
 }
 
 fn main() {
     let start = Instant::now();
-    let mut args = Args::parse();
+    let args = Args::parse();
 
-    if args.input.is_none() {
-        print!("Enter path to PDF file or directory (URL or local): ");
-        io::stdout().flush().unwrap();
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).unwrap();
-        args.input = Some(input.trim().to_string());
-        print!("Enter pattern (title or filename, default title): ");
-        io::stdout().flush().unwrap();
-        let mut pattern = String::new();
-        io::stdin().read_line(&mut pattern).unwrap();
-        if !pattern.trim().is_empty() {
-            args.pattern = pattern.trim().to_string();
-        }
-    }
-
-    let input = args.input.unwrap();
-    let input_path = resolve_input_path(&input).unwrap();
+    let input_path = args.input;
     if Path::new(&input_path).is_dir() {
         // Batch rename
         println!("Batch renaming PDFs in directory: {}", input_path);
-        batch_rename_pdfs(&input_path, &args.pattern);
+        batch_rename_pdfs(&input_path, args.dry_run, args.verbose);
     } else {
         // Single file
-        rename_single_pdf(&input_path, &args.pattern);
+        rename_single_pdf(&input_path, args.dry_run, args.verbose);
     }
 
     let duration = start.elapsed();
     println!("Execution time: {:.2} seconds", duration.as_secs_f64());
 }
 
-fn rename_single_pdf(path: &str, pattern: &str) {
+fn rename_single_pdf(path: &str, dry_run: bool, verbose: bool) {
     let doc = Document::load(path).expect("Failed to load PDF");
-    let new_name = if pattern == "title" {
-        let title = extract_title(&doc)
-            .or_else(|| extract_concise_content(&doc))
-            .unwrap_or_else(|| "Untitled".to_string());
-        let author = extract_author(&doc);
-        let base_name = if let Some(auth) = author {
-            format!("{} - {}", title, auth)
-        } else {
-            title
-        };
-        let concise_name = make_concise_filename(&base_name);
-        format!("{}.pdf", concise_name)
-    } else {
-        // For now, keep original
-        Path::new(path).file_name().unwrap().to_string_lossy().to_string()
-    };
+    let title = extract_title(&doc)
+        .or_else(|| extract_concise_content(&doc))
+        .unwrap_or_else(|| "Untitled".to_string());
+    if verbose {
+        println!("Extracted title: '{}' for {}", &title, path);
+    }
+    let concise_name = make_concise_filename(&title);
+    let new_name = format!("{}.pdf", concise_name);
     let new_path = Path::new(path).with_file_name(new_name);
-    fs::rename(path, &new_path).expect("Failed to rename file");
-    println!("Renamed {} to {}", path, new_path.display());
+    if dry_run {
+        println!("Would rename {} to {}", path, new_path.display());
+    } else {
+        fs::rename(path, &new_path).expect("Failed to rename file");
+        println!("Renamed {} to {}", path, new_path.display());
+    }
 }
 
-fn batch_rename_pdfs(dir: &str, pattern: &str) {
+fn batch_rename_pdfs(dir: &str, dry_run: bool, verbose: bool) {
     let pdf_paths: Vec<String> = fs::read_dir(dir)
         .expect("Failed to read directory")
         .filter_map(|entry| {
@@ -91,9 +74,56 @@ fn batch_rename_pdfs(dir: &str, pattern: &str) {
         })
         .collect();
 
-    pdf_paths.par_iter().for_each(|path| {
-        rename_single_pdf(path, pattern);
-    });
+    if verbose {
+        println!("Found {} PDF files to process", pdf_paths.len());
+    }
+
+    // Compute proposed new names
+    let mut proposed_renames: Vec<(String, String)> = pdf_paths
+        .par_iter()
+        .map(|path| {
+            let doc = Document::load(path).expect("Failed to load PDF");
+            let title = extract_title(&doc)
+                .or_else(|| extract_concise_content(&doc))
+                .unwrap_or_else(|| "Untitled".to_string());
+            if verbose {
+                println!("Extracted title: '{}' for {}", &title, path);
+            }
+            let concise_name = make_concise_filename(&title);
+            let new_name = format!("{}.pdf", concise_name);
+            (path.clone(), new_name)
+        })
+        .collect();
+
+    // Handle duplicates
+    let mut name_count: HashMap<String, usize> = HashMap::new();
+    for (_, new_name) in &proposed_renames {
+        *name_count.entry(new_name.clone()).or_insert(0) += 1;
+    }
+
+    let mut used_names: HashMap<String, usize> = HashMap::new();
+    for (_path, new_name) in &mut proposed_renames {
+        if name_count[&*new_name] > 1 {
+            let count = used_names.entry(new_name.clone()).or_insert(0);
+            *count += 1;
+            if *count > 1 {
+                let stem = Path::new(&new_name).file_stem().unwrap().to_string_lossy();
+                let extension = Path::new(&new_name).extension().unwrap_or_default().to_string_lossy();
+                *new_name = format!("{}_{}.{}", stem, *count - 1, extension);
+            }
+        }
+    }
+
+    // Now rename
+    for (path, new_name) in proposed_renames {
+        let new_path = Path::new(&path).with_file_name(&new_name);
+        if dry_run {
+            println!("Would rename {} to {}", path, new_path.display());
+        } else {
+            fs::rename(&path, &new_path).expect("Failed to rename file");
+            println!("Renamed {} to {}", path, new_path.display());
+        }
+    }
 }
 
 fn extract_title(doc: &Document) -> Option<String> {
@@ -118,27 +148,7 @@ fn extract_title(doc: &Document) -> Option<String> {
     }
 }
 
-fn extract_author(doc: &Document) -> Option<String> {
-    let trailer = &doc.trailer;
-    if let Ok(Object::Reference(info_ref)) = trailer.get(b"Info") {
-        if let Ok(Object::Dictionary(info_dict)) = doc.get_object(*info_ref) {
-            if let Ok(Object::String(author_bytes, _)) = info_dict.get(b"Author") {
-                let author = String::from_utf8_lossy(&author_bytes).to_string();
-                if !author.trim().is_empty() {
-                    Some(author)
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    } else {
-        None
-    }
-}
+
 
 fn extract_concise_content(doc: &Document) -> Option<String> {
     // Extract text from the first page
@@ -160,22 +170,18 @@ fn extract_concise_content(doc: &Document) -> Option<String> {
 }
 
 fn make_concise_filename(name: &str) -> String {
-    // Take first 100 chars, replace invalid filename chars with _, limit to 50
+    // Take first 100 chars, split on " - " or " by " and take the first part to focus on title
     let mut concise = name.chars().take(100).collect::<String>();
+    let separators = [" - ", " by ", " _by ", "_by "];
+    for sep in &separators {
+        if let Some(pos) = concise.find(sep) {
+            concise = concise[..pos].to_string();
+            break;
+        }
+    }
     concise = concise.replace(|c: char| !c.is_alphanumeric() && c != ' ' && c != '-' && c != '_', "_");
-    concise = concise.chars().take(50).collect();
+    concise = concise.chars().take(100).collect();
     concise.trim().to_string()
 }
 
-fn resolve_input_path(input: &str) -> Result<String, Box<dyn std::error::Error>> {
-    if input.starts_with("http://") || input.starts_with("https://") {
-        println!("Downloading from URL: {}", input);
-        let response = reqwest::blocking::get(input)?;
-        let temp_file = tempfile::NamedTempFile::new()?;
-        let content = response.bytes()?;
-        std::fs::write(temp_file.path(), content)?;
-        Ok(temp_file.path().to_str().unwrap().to_string())
-    } else {
-        Ok(input.to_string())
-    }
-}
+
